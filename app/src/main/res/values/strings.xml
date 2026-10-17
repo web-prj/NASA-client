@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Space Pictures</string>
+    <string name="pick_date">Pick date</string>
+    <string name="save">♡ Save</string>
+    <string name="saved">♥ Saved</string>
+    <string name="favorites">Favorites</string>
+    <string name="try_again">Try again</string>
+    <string name="picture_description">NASA picture of the day</string>
+    <string name="favorites_hint">Tap a picture to open it. Long-press to remove it.</string>
+    <string name="no_favorites">No favorites yet.\nTap \"♡ Save\" on a picture to add it here.</string>
+    <string name="added_to_favorites">Added to favorites</string>
+    <string name="removed_from_favorites">Removed from favorites</string>
+</resources>
