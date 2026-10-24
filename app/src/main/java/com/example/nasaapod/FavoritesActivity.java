@@ -29,9 +29,10 @@ public class FavoritesActivity extends Activity {
         listView.setEmptyView(findViewById(R.id.textEmpty));
 
         listView.setOnItemClickListener((parent, view, position, id) -> {
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.putExtra(MainActivity.EXTRA_DATE, items.get(position).getDate());
-            startActivity(intent);
+            Intent result = new Intent();
+            result.putExtra(MainActivity.EXTRA_DATE, items.get(position).getDate());
+            setResult(RESULT_OK, result);
+            finish();
         });
 
         listView.setOnItemLongClickListener((parent, view, position, id) -> {

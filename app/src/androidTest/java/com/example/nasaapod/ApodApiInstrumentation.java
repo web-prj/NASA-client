@@ -35,6 +35,21 @@ public class ApodApiInstrumentation extends Instrumentation {
             check(Apod.fromJson(dated.toJson()).getImageUrl().equals(dated.getImageUrl()),
                     "Preserve direct image URL in favorites");
 
+            // Literal tags and entity-looking text must survive repeated favorite loads.
+            JSONObject textEntry = new JSONObject(entry.toString());
+            textEntry.put("title", "Stars &lt;blue&gt; &amp;amp;");
+            textEntry.put("explanation", "Keep &lt;example&gt;, &amp;lt; and line breaks.<br>Next line.");
+            textEntry.put("copyright", "A &lt;B&gt; &amp;amp; C");
+            Apod original = ApodApi.parseResponse(textEntry.toString(), "2026-10-19");
+            check(original.getTitle().equals("Stars <blue> &amp;"), "Decode NASA text exactly once");
+            Apod restored = original;
+            for (int i = 0; i < 3; i++) {
+                restored = Apod.fromJson(restored.toJson());
+                check(restored.getTitle().equals(original.getTitle()), "Preserve saved title");
+                check(restored.getExplanation().equals(original.getExplanation()), "Preserve saved explanation");
+                check(restored.getCopyright().equals(original.getCopyright()), "Preserve saved credit");
+            }
+
             Apod latest = ApodApi.parseResponse("[" + entry + "]", null);
             check(latest.getDate().equals("2026-10-19"), "Read latest array");
             expectFailure("[]", null);

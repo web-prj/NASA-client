@@ -60,10 +60,16 @@ app/src/main/
    (for example `/240101` for January 1, 2024). The old APOD endpoint can return
    the NASA logo instead of the actual picture.
 3. The response can be an array (latest) or an object (specific date). The app
-   strips HTML from text and uses `hdurl` for images: `url` is now an article page.
+   strips HTML once in `ApodApi` and uses `hdurl` for images: `url` is now an
+   article page. Saved favorites are already plain text and are not decoded again.
 4. `ApodApi.downloadImage(url)` requests a phone-sized NASA image as a `Bitmap`.
 5. `runOnUiThread(...)` puts the result on the screen. Image failures show a
    retryable error instead of silently hiding the picture.
+
+The selected date is saved in `onSaveInstanceState()` so rotating the phone
+keeps it (the image is downloaded again). Favorites returns the selected date
+with `setResult()` and closes itself, instead of creating another main screen.
+These use the built-in Android activity APIs, with no additional libraries.
 
 ## On-device regression checks
 
@@ -75,4 +81,14 @@ adb shell am instrument -w com.example.nasaapod.test/com.example.nasaapod.ApodAp
 ```
 
 The dependency-free checks cover the current response formats, direct image URLs,
-HTML text, favorites serialization, video thumbnails, and missing/mismatched dates.
+HTML text, repeated plain-text favorites serialization, video thumbnails, and
+missing/mismatched dates.
+
+Manual screen checks:
+
+1. Use **Pick date**, select an older date, then rotate the device in both
+   directions. The selected date should stay the same.
+2. Save a picture, choose a different date, then open the saved picture through
+   **Favorites**. It should appear on the existing main screen.
+3. Open **Favorites** and press Back without selecting anything. The current
+   picture should remain selected.

@@ -3,6 +3,7 @@ package com.example.nasaapod;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.text.Html;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -91,11 +92,19 @@ public class ApodApi {
         if (!json.has("date")) {
             throw new ApodException(json.optString("message", "NASA has no picture for this date."));
         }
+        // Decode NASA's HTML only here, never when reloading saved plain text.
+        json.put("title", plainText(json.optString("title", "Untitled")));
+        json.put("explanation", plainText(json.optString("explanation", "")));
+        json.put("copyright", plainText(json.optString("copyright", "")));
         Apod apod = Apod.fromJson(json);
         if (requestedDate != null && !requestedDate.equals(apod.getDate())) {
             throw new ApodException("NASA returned a different date. Please try another date.");
         }
         return apod;
+    }
+
+    private static String plainText(String html) {
+        return Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString().trim();
     }
 
     /** Downloads an image. Returns null if it can't be loaded. */

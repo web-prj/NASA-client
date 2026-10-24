@@ -1,7 +1,5 @@
 package com.example.nasaapod;
 
-import android.text.Html;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -30,23 +28,19 @@ public class Apod {
         this.copyright = copyright;
     }
 
-    /** Builds an Apod from the JSON that NASA sends. */
+    /** Reads picture data. Text is already plain text, including in saved favorites. */
     public static Apod fromJson(JSONObject json) throws JSONException {
         Apod apod = new Apod(
                 json.getString("date"),
-                plainText(json.optString("title", "Untitled")),
-                plainText(json.optString("explanation", "")),
+                json.optString("title", "Untitled"),
+                json.optString("explanation", ""),
                 json.optString("url", ""),
                 json.optString("media_type", "image"),
                 json.optString("thumbnail_url", ""),
-                plainText(json.optString("copyright", ""))
+                json.optString("copyright", "")
         );
         apod.hdUrl = json.optString("hdurl", "");
         return apod;
-    }
-
-    private static String plainText(String html) {
-        return Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString().trim();
     }
 
     /** Turns this Apod into JSON, so it can be saved as a favorite. */

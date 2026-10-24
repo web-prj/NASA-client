@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
 
     /** Pass a date ("yyyy-MM-dd") with this key to open that day's picture. */
     public static final String EXTRA_DATE = "date";
+    private static final int REQUEST_FAVORITE = 1;
 
     // Network calls must not run on the main (UI) thread, so we use this one.
     private final ExecutorService backgroundThread = Executors.newSingleThreadExecutor();
@@ -61,12 +62,32 @@ public class MainActivity extends Activity {
         buttonPickDate.setOnClickListener(v -> pickDate());
         buttonFavorite.setOnClickListener(v -> toggleFavorite());
         findViewById(R.id.buttonFavorites).setOnClickListener(v ->
-                startActivity(new Intent(this, FavoritesActivity.class)));
+                startActivityForResult(new Intent(this, FavoritesActivity.class), REQUEST_FAVORITE));
         findViewById(R.id.buttonRetry).setOnClickListener(v -> loadPicture());
 
         favorites = new FavoritesStore(this);
-        requestedDate = getIntent().getStringExtra(EXTRA_DATE);
+        requestedDate = savedInstanceState == null
+                ? getIntent().getStringExtra(EXTRA_DATE)
+                : savedInstanceState.getString(EXTRA_DATE);
         loadPicture();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(EXTRA_DATE, requestedDate);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_FAVORITE && resultCode == RESULT_OK && data != null) {
+            String date = data.getStringExtra(EXTRA_DATE);
+            if (date != null) {
+                requestedDate = date;
+                loadPicture();
+            }
+        }
     }
 
     @Override
