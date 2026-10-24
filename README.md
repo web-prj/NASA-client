@@ -12,12 +12,16 @@ No extra libraries: only classes built into Android
 
 ## Before you run
 
-The app uses NASA's `DEMO_KEY`, which allows only a few requests per hour.
-Get a free key at <https://api.nasa.gov> and paste it into `ApodApi.java`:
+Get a free NASA API key at <https://api.nasa.gov> and add it to the file
+`local.properties` in the project folder (create the file if it doesn't exist):
 
-```java
-private static final String API_KEY = "DEMO_KEY";
+```properties
+nasa.api.key=YOUR_KEY
 ```
+
+`local.properties` is in `.gitignore`, so your key is never pushed to GitHub.
+Each group member uses their own key. Without one, the app falls back to
+NASA's `DEMO_KEY`, which allows only a few requests per hour.
 
 ## Run it
 

@@ -2,6 +2,16 @@ plugins {
     id 'com.android.application'
 }
 
+// Read the NASA API key from local.properties, which is never uploaded to GitHub.
+// Add this line to local.properties:  nasa.api.key=YOUR_KEY
+// Without it, the app uses DEMO_KEY (only a few requests per hour).
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+def nasaApiKey = localProperties.getProperty('nasa.api.key', 'DEMO_KEY')
+
 android {
     namespace = 'com.example.nasaapod'
     compileSdk = 36
@@ -12,6 +22,13 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = '1.0'
+
+        // Makes the key available in Java as BuildConfig.NASA_API_KEY
+        buildConfigField 'String', 'NASA_API_KEY', "\"${nasaApiKey}\""
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

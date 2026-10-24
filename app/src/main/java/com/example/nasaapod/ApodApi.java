@@ -19,9 +19,8 @@ import java.net.URL;
  */
 public class ApodApi {
 
-    // DEMO_KEY works for testing but allows only a few requests per hour.
-    // Get your own free key at https://api.nasa.gov and paste it here.
-    private static final String API_KEY = "DEMO_KEY";
+    // Comes from local.properties (see app/build.gradle), so it never ends up on GitHub.
+    private static final String API_KEY = BuildConfig.NASA_API_KEY;
 
     private static final String BASE_URL = "https://api.nasa.gov/planetary/apod";
     private static final int TIMEOUT_MS = 15000;
