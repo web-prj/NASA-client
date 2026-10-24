@@ -28,7 +28,31 @@ final class SpaceUi {
         activity.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         int topPadding = top.getPaddingTop();
         int bottomPadding = bottom.getPaddingBottom();
+        View[] safeViews = {top, bottom, root.findViewById(R.id.titleGlass),
+                root.findViewById(R.id.dayNavigation), root.findViewById(R.id.storyCard),
+                root.findViewById(R.id.errorView), root.findViewById(R.id.listFavorites)};
+        int[] leftPadding = new int[safeViews.length];
+        int[] rightPadding = new int[safeViews.length];
+        for (int i = 0; i < safeViews.length; i++) {
+            if (safeViews[i] != null) {
+                leftPadding[i] = safeViews[i].getPaddingLeft();
+                rightPadding[i] = safeViews[i].getPaddingRight();
+            }
+        }
         root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int left = insets.getSystemWindowInsetLeft();
+            int right = insets.getSystemWindowInsetRight();
+            if (Build.VERSION.SDK_INT >= 28 && insets.getDisplayCutout() != null) {
+                left = Math.max(left, insets.getDisplayCutout().getSafeInsetLeft());
+                right = Math.max(right, insets.getDisplayCutout().getSafeInsetRight());
+            }
+            for (int i = 0; i < safeViews.length; i++) {
+                View safe = safeViews[i];
+                if (safe != null) {
+                    safe.setPadding(leftPadding[i] + left, safe.getPaddingTop(),
+                            rightPadding[i] + right, safe.getPaddingBottom());
+                }
+            }
             top.setPadding(top.getPaddingLeft(), topPadding + insets.getSystemWindowInsetTop(),
                     top.getPaddingRight(), top.getPaddingBottom());
             bottom.setPadding(bottom.getPaddingLeft(), bottom.getPaddingTop(),

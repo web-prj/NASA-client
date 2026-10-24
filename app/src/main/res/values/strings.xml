@@ -7,7 +7,6 @@
     <string name="loading_picture">Finding your place in space…</string>
     <string name="error_title">Lost in space</string>
     <string name="date_chip">▦ %1$s</string>
-    <string name="video_metadata">%1$s\n%2$s</string>
     <string name="unsave">Remove from favorites</string>
     <string name="remove_favorite_title">Remove this favorite?</string>
     <string name="remove">Remove</string>
@@ -17,8 +16,6 @@
     <string name="next_day">Next ›</string>
     <string name="today">Today</string>
     <string name="open_original">Open original image</string>
-    <string name="open_video">Open video</string>
-    <string name="no_video_preview">No preview is available. Tap Open video to view this entry.</string>
     <string name="cannot_open_link">Cannot open this link. Please install or enable a web browser.</string>
     <string name="save">♡ Save</string>
     <string name="favorites">Favorites</string>

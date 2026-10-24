@@ -29,7 +29,12 @@ public class FavoritesStore {
         try {
             JSONArray array = new JSONArray(prefs.getString(KEY_LIST, "[]"));
             for (int i = 0; i < array.length(); i++) {
-                favorites.add(Apod.fromJson(array.getJSONObject(i)));
+                // Ignore old non-photo favorites without hiding valid photos after them.
+                try {
+                    favorites.add(Apod.fromJson(array.getJSONObject(i)));
+                } catch (JSONException ignored) {
+                    // Unsupported or malformed entry; keep reading the rest of the collection.
+                }
             }
         } catch (JSONException e) {
             // Saved data is broken: start with an empty list

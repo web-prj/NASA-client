@@ -37,6 +37,47 @@ public class ApodApi {
         }
     }
 
+    /** Distinguishes a non-photo entry from connection, parsing or missing-date errors. */
+    static class NoPhotoException extends ApodException {
+        final String date;
+        NoPhotoException(String date) {
+            super("No photo for this date. Pick another date or return to the latest photo.");
+            this.date = date;
+        }
+    }
+
+    interface PhotoSource {
+        Apod fetch(String date) throws ApodException;
+    }
+
+    /** Latest searches backward; day browsing skips non-photo entries in its direction. */
+    public static Apod fetchPhoto(String date, int direction) throws ApodException {
+        return findPhoto(date, direction, ApodApi::fetchPicture);
+    }
+
+    static Apod findPhoto(String date, int direction, PhotoSource source) throws ApodException {
+        int step = date == null ? -1 : direction;
+        String candidate = date;
+        // Bound network work rather than searching indefinitely through unavailable photos.
+        for (int i = 0; i < 31; i++) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new ApodException("Photo loading was cancelled.");
+            }
+            try {
+                return source.fetch(candidate);
+            } catch (NoPhotoException e) {
+                if (step == 0) { throw e; } // A picked date must never silently change.
+                candidate = MainActivity.shiftDate(e.date, step);
+                String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                        .format(new java.util.Date());
+                if (candidate.compareTo("1995-06-16") < 0 || candidate.compareTo(today) > 0) {
+                    throw new ApodException("No more photos in this direction. Pick another date.");
+                }
+            }
+        }
+        throw new ApodException("No photo found within 31 entries. Please pick another date.");
+    }
+
     /**
      * Downloads the picture for a date ("yyyy-MM-dd").
      * Pass null to get the latest picture.
@@ -93,15 +134,18 @@ public class ApodApi {
         if (!json.has("date")) {
             throw new ApodException(json.optString("message", "NASA has no picture for this date."));
         }
+        String date = json.getString("date");
+        if (requestedDate != null && !requestedDate.equals(date)) {
+            throw new ApodException("NASA returned a different date. Please try another date.");
+        }
+        if (!"image".equals(json.optString("media_type", "image"))) {
+            throw new NoPhotoException(date);
+        }
         // Decode NASA's HTML only here, never when reloading saved plain text.
         json.put("title", plainText(json.optString("title", "Untitled")));
         json.put("explanation", plainText(json.optString("explanation", "")));
         json.put("copyright", plainText(json.optString("copyright", "")));
-        Apod apod = Apod.fromJson(json);
-        if (requestedDate != null && !requestedDate.equals(apod.getDate())) {
-            throw new ApodException("NASA returned a different date. Please try another date.");
-        }
-        return apod;
+        return Apod.fromJson(json);
     }
 
     private static String plainText(String html) {
@@ -141,6 +185,7 @@ public class ApodApi {
                 byte[] buffer = new byte[8192];
                 int count;
                 while ((count = stream.read(buffer)) != -1) {
+                    if (Thread.currentThread().isInterrupted()) { return null; }
                     if (bytes.size() + count > 32 * 1024 * 1024) { return null; }
                     bytes.write(buffer, 0, count);
                 }

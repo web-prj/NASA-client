@@ -70,7 +70,11 @@ public class FavoritesActivity extends Activity {
         });
     }
 
-    @Override protected void onResume() { super.onResume(); refresh(); }
+    @Override protected void onResume() {
+        super.onResume();
+        failed.clear(); // Returning after connectivity recovers gives blank thumbnails another try.
+        refresh();
+    }
 
     private void refresh() {
         items = favorites.getAll();

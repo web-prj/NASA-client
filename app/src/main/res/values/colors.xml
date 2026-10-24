@@ -9,5 +9,6 @@
     <color name="ripple">#248AB4FF</color>
     <color name="glass">#C414161F</color>
     <color name="scrim_bottom">#ED05060A</color>
+    <color name="hero_scrim_top">#66000000</color>
     <color name="transparent">#00000000</color>
 </resources>

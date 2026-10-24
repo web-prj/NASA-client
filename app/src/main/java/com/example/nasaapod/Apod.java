@@ -11,32 +11,28 @@ public class Apod {
     private final String date;          // Format: yyyy-MM-dd
     private final String title;
     private final String explanation;
-    private final String url;           // The image, or the video link
-    private final String mediaType;     // "image" or "video"
-    private final String thumbnailUrl;  // Preview image, only for videos
+    private final String url;           // Legacy image URL or NASA article URL
     private final String copyright;
     private String hdUrl = "";           // Direct image URL in NASA's new API
 
-    public Apod(String date, String title, String explanation, String url,
-                String mediaType, String thumbnailUrl, String copyright) {
+    public Apod(String date, String title, String explanation, String url, String copyright) {
         this.date = date;
         this.title = title;
         this.explanation = explanation;
         this.url = url;
-        this.mediaType = mediaType;
-        this.thumbnailUrl = thumbnailUrl;
         this.copyright = copyright;
     }
 
     /** Reads picture data. Text is already plain text, including in saved favorites. */
     public static Apod fromJson(JSONObject json) throws JSONException {
+        if (!"image".equals(json.optString("media_type", "image"))) {
+            throw new JSONException("Only photos are supported.");
+        }
         Apod apod = new Apod(
                 json.getString("date"),
                 json.optString("title", "Untitled"),
                 json.optString("explanation", ""),
                 json.optString("url", ""),
-                json.optString("media_type", "image"),
-                json.optString("thumbnail_url", ""),
                 json.optString("copyright", "")
         );
         apod.hdUrl = json.optString("hdurl", "");
@@ -51,24 +47,18 @@ public class Apod {
         json.put("explanation", explanation);
         json.put("url", url);
         json.put("hdurl", hdUrl);
-        json.put("media_type", mediaType);
-        json.put("thumbnail_url", thumbnailUrl);
+        json.put("media_type", "image");
         json.put("copyright", copyright);
         return json;
     }
 
-    public boolean isImage() {
-        return "image".equals(mediaType);
-    }
-
-    /** The picture to show: the image itself, or the preview of a video. */
+    /** Direct photo URL, with support for older saved favorites. */
     public String getImageUrl() {
-        return isImage() ? (hdUrl.isEmpty() ? url : hdUrl) : thumbnailUrl;
+        return hdUrl.isEmpty() ? url : hdUrl;
     }
 
-    /** Full image URL, or the video's page (never its thumbnail). */
     public String getOriginalUrl() {
-        return isImage() ? getImageUrl() : url;
+        return getImageUrl();
     }
 
     public String getDate() {
@@ -81,10 +71,6 @@ public class Apod {
 
     public String getExplanation() {
         return explanation;
-    }
-
-    public String getUrl() {
-        return url;
     }
 
     public String getCopyright() {

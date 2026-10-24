@@ -5,6 +5,9 @@ import android.app.Instrumentation;
 import android.os.Bundle;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
+import android.content.Context;
 
 /** Small on-device regression suite using only Android's built-in test APIs. */
 public class ApodApiInstrumentation extends Instrumentation {
@@ -63,14 +66,19 @@ public class ApodApiInstrumentation extends Instrumentation {
                     "Old saved entries still load");
             check(Apod.fromJson(entry).getOriginalUrl().equals("https://example.com/legacy.jpg"),
                     "Open old image URL when hdurl is absent");
-            entry.put("media_type", "video");
-            entry.put("thumbnail_url", "https://example.com/preview.jpg");
-            entry.put("hdurl", "https://example.com/video");
-            check(Apod.fromJson(entry).getImageUrl().equals("https://example.com/preview.jpg"),
-                    "Video uses thumbnail, not hdurl");
-
-            check(Apod.fromJson(entry).getOriginalUrl().equals("https://example.com/legacy.jpg"),
-                    "Open video's page, not thumbnail or hdurl");
+            JSONObject nonPhoto = new JSONObject(entry.toString()).put("media_type", "video");
+            try {
+                Apod.fromJson(nonPhoto);
+                throw new AssertionError("Non-photo data must not become a photo");
+            } catch (JSONException expected) { }
+            try {
+                ApodApi.parseResponse(nonPhoto.toString(), "2026-10-19");
+                throw new AssertionError("Picked non-photo date must show a no-photo error");
+            } catch (ApodApi.NoPhotoException expected) {
+                check(expected.date.equals("2026-10-19"), "Keep rejected date for browsing");
+            }
+            checkPhotoSearch();
+            checkPhotoFavorites(entry, nonPhoto);
 
             check(MainActivity.shiftDate("2024-01-01", -1).equals("2023-12-31"), "Previous year");
             check(MainActivity.shiftDate("2023-12-31", 1).equals("2024-01-01"), "Next year");
@@ -95,6 +103,103 @@ public class ApodApiInstrumentation extends Instrumentation {
         } catch (Exception | AssertionError failure) {
             results.putString("stream", "APOD regression checks FAILED: " + failure + "\n");
             finish(Activity.RESULT_CANCELED, results);
+        }
+    }
+
+    private static void checkPhotoSearch() throws Exception {
+        ApodApi.PhotoSource source = date -> {
+            if (date == null || date.equals("2024-01-06")) {
+                throw new ApodApi.NoPhotoException("2024-01-06");
+            }
+            return new Apod(date, "Photo", "Description", "https://example.com/photo.jpg", "NASA");
+        };
+        check(ApodApi.findPhoto(null, 0, source).getDate().equals("2024-01-05"),
+                "Latest falls back to previous photo");
+        check(ApodApi.findPhoto("2024-01-06", 1, source).getDate().equals("2024-01-07"),
+                "Next skips non-photo entry forward");
+        check(ApodApi.findPhoto("2024-01-06", -1, source).getDate().equals("2024-01-05"),
+                "Previous skips non-photo entry backward");
+        try {
+            ApodApi.findPhoto("2024-01-06", 0, source);
+            throw new AssertionError("Date picker must not silently change dates");
+        } catch (ApodApi.NoPhotoException expected) { }
+        int[] calls = {0};
+        try {
+            ApodApi.findPhoto("2024-01-06", 1, date -> {
+                calls[0]++;
+                throw new ApodApi.ApodException("Connection failed");
+            });
+            throw new AssertionError("Connection errors must not be skipped");
+        } catch (ApodApi.ApodException expected) {
+            check(calls[0] == 1, "Stop immediately on real errors");
+        }
+        calls[0] = 0;
+        try {
+            ApodApi.findPhoto("2024-01-06", 1, date -> {
+                calls[0]++;
+                if (date.equals("2024-01-06")) { throw new ApodApi.NoPhotoException(date); }
+                throw new ApodApi.ApodException("Connection failed after skip");
+            });
+            throw new AssertionError("Errors after skipped entries must stop the search");
+        } catch (ApodApi.ApodException expected) {
+            check(calls[0] == 2 && expected.getMessage().equals("Connection failed after skip"),
+                    "Preserve the original error after skipping unsupported media");
+        }
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                .format(new java.util.Date());
+        calls[0] = 0;
+        try {
+            ApodApi.findPhoto(today, 1, date -> {
+                calls[0]++;
+                throw new ApodApi.NoPhotoException(date);
+            });
+            throw new AssertionError("Search must stop at today");
+        } catch (ApodApi.ApodException expected) {
+            check(calls[0] == 1, "Do not browse into the future");
+        }
+        calls[0] = 0;
+        try {
+            ApodApi.findPhoto("2024-01-06", -1, date -> {
+                calls[0]++;
+                throw new ApodApi.NoPhotoException(date);
+            });
+            throw new AssertionError("Search must be bounded");
+        } catch (ApodApi.ApodException expected) {
+            check(calls[0] == 31, "Cap search at 31 entries");
+        }
+        calls[0] = 0;
+        try {
+            ApodApi.findPhoto("1995-06-16", -1, date -> {
+                calls[0]++;
+                throw new ApodApi.NoPhotoException(date);
+            });
+            throw new AssertionError("Search must stop at first APOD date");
+        } catch (ApodApi.ApodException expected) {
+            check(calls[0] == 1, "Do not browse before the first APOD date");
+        }
+    }
+
+    private void checkPhotoFavorites(JSONObject photo, JSONObject nonPhoto) throws Exception {
+        // Use the test APK's preferences, never overwrite the user's collection.
+        android.content.SharedPreferences prefs = getContext()
+                .getSharedPreferences("favorites", Context.MODE_PRIVATE);
+        String before = prefs.getString("list", "[]");
+        try {
+            JSONArray saved = new JSONArray().put(nonPhoto).put(photo).put(new JSONObject())
+                    .put(new JSONObject(photo.toString()).put("date", "2024-01-01"));
+            prefs.edit().putString("list", saved.toString()).commit();
+            FavoritesStore store = new FavoritesStore(getContext());
+            check(store.getAll().size() == 2, "Hide non-photo/malformed favorites and retain all photos");
+            check(prefs.getString("list", "").equals(saved.toString()), "Reading must not rewrite saved data");
+            check(store.getAll().get(1).getDate().equals("2024-01-01"),
+                    "Continue reading photos after unsupported favorites");
+            store.remove("2024-01-01");
+            check(new FavoritesStore(getContext()).getAll().size() == 1,
+                    "Photo favorite removal persists across store reconstruction");
+            check(new JSONArray(prefs.getString("list", "[]")).length() == 1,
+                    "A successful write removes unsupported old entries");
+        } finally {
+            prefs.edit().putString("list", before).commit();
         }
     }
 

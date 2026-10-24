@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /** APOD detail screen, built with Java and native XML Views. */
 public class MainActivity extends Activity {
@@ -37,9 +38,10 @@ public class MainActivity extends Activity {
     private boolean loading;
     private int direction;
     private int requestNumber;
+    private Future<?> pendingRequest;
     private ObjectAnimator skeletonPulse;
     private ScrollView contentView;
-    private View loadingView, errorView, hero, titleGlass, playButton;
+    private View loadingView, errorView, hero, titleGlass;
     private ImageView imagePicture;
     private TextView textTitle, textInfo, textExplanation, textError;
     private Button buttonPickDate, buttonPrevious, buttonNext, buttonToday;
@@ -53,7 +55,6 @@ public class MainActivity extends Activity {
         loadingView = findViewById(R.id.loadingView);
         errorView = findViewById(R.id.errorView);
         hero = findViewById(R.id.hero);
-        hero.setClipToOutline(true);
         titleGlass = findViewById(R.id.titleGlass);
         imagePicture = findViewById(R.id.imagePicture);
         textTitle = findViewById(R.id.textTitle);
@@ -66,7 +67,6 @@ public class MainActivity extends Activity {
         buttonToday = findViewById(R.id.buttonToday);
         buttonFavorite = findViewById(R.id.buttonFavorite);
         buttonOpenOriginal = findViewById(R.id.buttonOpenOriginal);
-        playButton = findViewById(R.id.buttonPlay);
         favorites = new FavoritesStore(this);
 
         // Image extends behind the status bar; only its controls receive the top inset.
@@ -79,7 +79,6 @@ public class MainActivity extends Activity {
         buttonToday.setOnClickListener(v -> latest());
         buttonFavorite.setOnClickListener(v -> toggleFavorite());
         buttonOpenOriginal.setOnClickListener(v -> openOriginal());
-        playButton.setOnClickListener(v -> openOriginal());
         findViewById(R.id.buttonRetry).setOnClickListener(v -> loadPicture());
         findViewById(R.id.buttonErrorDate).setOnClickListener(v -> pickDate());
         findViewById(R.id.buttonErrorToday).setOnClickListener(v -> latest());
@@ -104,6 +103,7 @@ public class MainActivity extends Activity {
         });
         requestedDate = savedInstanceState == null ? getIntent().getStringExtra(EXTRA_DATE)
                 : savedInstanceState.getString(EXTRA_DATE);
+        direction = savedInstanceState == null ? 0 : savedInstanceState.getInt("direction", 0);
         loadPicture();
     }
 
@@ -132,9 +132,7 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
-        imagePicture.setOnClickListener(v -> {
-            if (currentApod != null && !currentApod.isImage()) { openOriginal(); }
-        });
+        imagePicture.setOnClickListener(v -> { /* Taps remain accessible; swipes browse photos. */ });
         imagePicture.setOnTouchListener((view, event) -> {
             // Let vertical gestures continue scrolling the explanation.
             return gestures.onTouchEvent(event);
@@ -151,6 +149,7 @@ public class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
         state.putString(EXTRA_DATE, requestedDate);
+        state.putInt("direction", direction);
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -179,23 +178,27 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy() {
         requestNumber++;
         stopSkeleton();
+        if (pendingRequest != null) { pendingRequest.cancel(true); }
         backgroundThread.shutdownNow();
         super.onDestroy();
     }
 
     private void loadPicture() {
         loading = true;
+        if (pendingRequest != null) { pendingRequest.cancel(true); }
         final int request = ++requestNumber;
         showOnly(loadingView);
         startSkeleton();
         buttonFavorite.setEnabled(false);
         buttonOpenOriginal.setEnabled(false);
         String date = requestedDate;
-        backgroundThread.execute(() -> {
+        int searchDirection = direction;
+        pendingRequest = backgroundThread.submit(() -> {
             try {
-                Apod apod = ApodApi.fetchPicture(date);
+                Apod apod = ApodApi.fetchPhoto(date, searchDirection);
+                if (Thread.currentThread().isInterrupted()) { return; }
                 Bitmap image = ApodApi.downloadImage(apod.getImageUrl());
-                if (apod.isImage() && image == null) {
+                if (image == null) {
                     throw new ApodApi.ApodException(getString(R.string.image_download_error));
                 }
                 runOnUiThread(() -> {
@@ -213,6 +216,7 @@ public class MainActivity extends Activity {
         loading = false;
         stopSkeleton();
         currentApod = apod;
+        requestedDate = apod.getDate(); // Retain the actual photo date after skipping entries.
         imagePicture.animate().cancel();
         imagePicture.setImageBitmap(image);
         imagePicture.setContentDescription(apod.getTitle());
@@ -221,10 +225,6 @@ public class MainActivity extends Activity {
         if (!apod.getCopyright().isEmpty()) { info += "  ·  © " + apod.getCopyright(); }
         textInfo.setText(info);
         textExplanation.setText(displayExplanation(apod.getExplanation()));
-        playButton.setVisibility(apod.isImage() ? View.GONE : View.VISIBLE);
-        if (!apod.isImage() && image == null) {
-            textInfo.setText(getString(R.string.video_metadata, info, getString(R.string.no_video_preview)));
-        }
         contentView.scrollTo(0, 0);
         imagePicture.setTranslationY(0f);
         titleGlass.setAlpha(1f);
@@ -233,8 +233,7 @@ public class MainActivity extends Activity {
         showOnly(contentView);
         updateNavigation();
         updateFavoriteButton();
-        buttonOpenOriginal.setContentDescription(getString(apod.isImage()
-                ? R.string.open_original : R.string.open_video));
+        buttonOpenOriginal.setContentDescription(getString(R.string.open_original));
         buttonOpenOriginal.setEnabled(!apod.getOriginalUrl().isEmpty());
         SpaceUi.enter(this, contentView, direction, 0);
         if (SpaceUi.motionEnabled(this)) {
@@ -253,7 +252,7 @@ public class MainActivity extends Activity {
         stopSkeleton();
         textError.setText(message);
         showOnly(errorView);
-        direction = 0;
+        // Retry (including after rotation) must keep the original photo-search direction.
     }
 
     private void showOnly(View view) {

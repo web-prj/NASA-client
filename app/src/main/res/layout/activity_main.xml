@@ -5,29 +5,28 @@
     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
         <ScrollView android:id="@+id/contentView" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:clipToPadding="false" android:visibility="invisible">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                <FrameLayout android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="@dimen/hero_min_height" android:background="@drawable/card_background">
+                <FrameLayout android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="@dimen/hero_min_height" android:background="@color/surface">
                     <ImageView android:id="@+id/imagePicture" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:contentDescription="@string/picture_description" />
-                    <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/image_scrim" android:importantForAccessibility="no" />
+                    <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/hero_scrim" android:importantForAccessibility="no" />
                     <LinearLayout android:id="@+id/heroActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="top" android:padding="@dimen/page_padding" android:gravity="center_vertical" android:orientation="horizontal">
                         <TextView style="@style/SpaceLabel" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/hero_label" android:textColor="@color/text_primary" />
                         <ImageButton android:id="@+id/buttonFavorite" style="@style/SpaceIconButton" android:layout_width="@dimen/touch_target" android:layout_height="@dimen/touch_target" android:src="@drawable/ic_heart_outline" android:contentDescription="@string/save" />
                         <ImageButton android:id="@+id/buttonOpenOriginal" style="@style/SpaceIconButton" android:layout_width="@dimen/touch_target" android:layout_height="@dimen/touch_target" android:layout_marginStart="@dimen/space_small" android:src="@drawable/ic_open" android:contentDescription="@string/open_original" />
                     </LinearLayout>
-                    <ImageButton android:id="@+id/buttonPlay" style="@style/SpaceIconButton" android:layout_width="@dimen/tab_height" android:layout_height="@dimen/tab_height" android:layout_gravity="center" android:src="@drawable/ic_play" android:contentDescription="@string/open_video" android:visibility="gone" />
                     <LinearLayout android:id="@+id/titleGlass" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:layout_margin="@dimen/page_padding" android:padding="@dimen/page_padding" android:orientation="vertical" android:background="@drawable/glass_background">
                         <TextView android:id="@+id/textTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="@dimen/headline_size" android:fontFamily="sans-serif-medium" android:textStyle="bold" android:letterSpacing="-0.025" android:textColor="@color/text_primary" />
                         <TextView android:id="@+id/textInfo" style="@style/SpaceLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_small" android:maxLines="3" android:ellipsize="end" />
                     </LinearLayout>
                 </FrameLayout>
                 <include layout="@layout/day_navigation" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="@dimen/page_padding" android:layout_marginEnd="@dimen/page_padding" android:layout_marginBottom="@dimen/page_padding" android:padding="@dimen/page_padding" android:orientation="vertical" android:background="@drawable/card_background">
+                <LinearLayout android:id="@+id/storyCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="@dimen/page_padding" android:layout_marginEnd="@dimen/page_padding" android:layout_marginBottom="@dimen/page_padding" android:padding="@dimen/page_padding" android:orientation="vertical" android:background="@drawable/card_background">
                     <TextView style="@style/SpaceLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/story_label" />
                     <TextView android:id="@+id/textExplanation" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_medium" android:textSize="@dimen/body_size" android:textColor="@color/text_primary" android:lineSpacingExtra="@dimen/body_line_spacing" android:textIsSelectable="true" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
         <LinearLayout android:id="@+id/loadingView" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:importantForAccessibility="noHideDescendants">
-            <FrameLayout android:id="@+id/skeletonHero" android:layout_width="match_parent" android:layout_height="@dimen/hero_min_height" android:background="@drawable/card_background">
+            <FrameLayout android:id="@+id/skeletonHero" android:layout_width="match_parent" android:layout_height="@dimen/hero_min_height" android:background="@color/surface">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" style="@style/SpaceLabel" android:text="@string/loading_picture" />
             </FrameLayout>
             <View android:layout_width="match_parent" android:layout_height="@dimen/touch_target" android:layout_margin="@dimen/page_padding" android:background="@drawable/card_background" />
