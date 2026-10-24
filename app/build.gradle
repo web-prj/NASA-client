@@ -22,6 +22,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = '1.0'
+        testInstrumentationRunner 'com.example.nasaapod.ApodApiInstrumentation'
 
         // Makes the key available in Java as BuildConfig.NASA_API_KEY
         buildConfigField 'String', 'NASA_API_KEY', "\"${nasaApiKey}\""

@@ -92,6 +92,10 @@ public class MainActivity extends Activity {
             try {
                 Apod apod = ApodApi.fetchPicture(date);
                 Bitmap image = ApodApi.downloadImage(apod.getImageUrl());
+                if (apod.isImage() && image == null) {
+                    throw new ApodApi.ApodException(
+                            "The picture could not be downloaded. Check your connection and try again.");
+                }
                 runOnUiThread(() -> showPicture(apod, image));
             } catch (ApodApi.ApodException e) {
                 runOnUiThread(() -> showError(e.getMessage()));
@@ -117,7 +121,10 @@ public class MainActivity extends Activity {
             info += "  ·  © " + apod.getCopyright();
         }
         if (!apod.isImage()) {
-            info += "\nToday's entry is a video: " + apod.getUrl();
+            info += "\nThis entry is a video: " + apod.getUrl();
+            if (image == null) {
+                info += "\nNo preview is available. Open the video link above in your browser.";
+            }
         }
 
         textTitle.setText(apod.getTitle());

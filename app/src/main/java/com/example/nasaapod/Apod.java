@@ -1,5 +1,7 @@
 package com.example.nasaapod;
 
+import android.text.Html;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,6 +17,7 @@ public class Apod {
     private final String mediaType;     // "image" or "video"
     private final String thumbnailUrl;  // Preview image, only for videos
     private final String copyright;
+    private String hdUrl = "";           // Direct image URL in NASA's new API
 
     public Apod(String date, String title, String explanation, String url,
                 String mediaType, String thumbnailUrl, String copyright) {
@@ -29,15 +32,21 @@ public class Apod {
 
     /** Builds an Apod from the JSON that NASA sends. */
     public static Apod fromJson(JSONObject json) throws JSONException {
-        return new Apod(
+        Apod apod = new Apod(
                 json.getString("date"),
-                json.optString("title", "Untitled"),
-                json.optString("explanation", ""),
+                plainText(json.optString("title", "Untitled")),
+                plainText(json.optString("explanation", "")),
                 json.optString("url", ""),
                 json.optString("media_type", "image"),
                 json.optString("thumbnail_url", ""),
-                json.optString("copyright", "").trim()
+                plainText(json.optString("copyright", ""))
         );
+        apod.hdUrl = json.optString("hdurl", "");
+        return apod;
+    }
+
+    private static String plainText(String html) {
+        return Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString().trim();
     }
 
     /** Turns this Apod into JSON, so it can be saved as a favorite. */
@@ -47,6 +56,7 @@ public class Apod {
         json.put("title", title);
         json.put("explanation", explanation);
         json.put("url", url);
+        json.put("hdurl", hdUrl);
         json.put("media_type", mediaType);
         json.put("thumbnail_url", thumbnailUrl);
         json.put("copyright", copyright);
@@ -59,7 +69,7 @@ public class Apod {
 
     /** The picture to show: the image itself, or the preview of a video. */
     public String getImageUrl() {
-        return isImage() ? url : thumbnailUrl;
+        return isImage() ? (hdUrl.isEmpty() ? url : hdUrl) : thumbnailUrl;
     }
 
     public String getDate() {

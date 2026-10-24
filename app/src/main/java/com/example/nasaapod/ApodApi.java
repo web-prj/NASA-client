@@ -2,8 +2,11 @@ package com.example.nasaapod;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONTokener;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -22,7 +25,7 @@ public class ApodApi {
     // Comes from local.properties (see app/build.gradle), so it never ends up on GitHub.
     private static final String API_KEY = BuildConfig.NASA_API_KEY;
 
-    private static final String BASE_URL = "https://api.nasa.gov/planetary/apod";
+    private static final String BASE_URL = "https://science.nasa.gov/wp-json/wp/v2/apod-basic";
     private static final int TIMEOUT_MS = 15000;
 
     /** An error with a message that is safe to show to the user. */
@@ -37,10 +40,12 @@ public class ApodApi {
      * Pass null to get the latest picture.
      */
     public static Apod fetchPicture(String date) throws ApodException {
-        String address = BASE_URL + "?thumbs=true&api_key=" + API_KEY;
-        if (date != null) {
-            address += "&date=" + date;
+        // The new API ignores ?date=. A dated entry uses a /YYMMDD path.
+        if (date != null && !date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new ApodException("Choose a date in YYYY-MM-DD format.");
         }
+        String path = date == null ? "" : "/" + date.substring(2).replace("-", "");
+        String address = BASE_URL + path + "?per_page=1&api_key=" + API_KEY;
 
         HttpURLConnection connection = null;
         try {
@@ -50,8 +55,7 @@ public class ApodApi {
 
             int status = connection.getResponseCode();
             if (status == 200) {
-                String body = readText(connection.getInputStream());
-                return Apod.fromJson(new JSONObject(body));
+                return parseResponse(readText(connection.getInputStream()), date);
             }
             if (status == 429) {
                 throw new ApodException("Too many requests. Wait a while, or use "
@@ -69,6 +73,31 @@ public class ApodApi {
         }
     }
 
+    /** Latest returns an array; a dated request returns a single object. */
+    static Apod parseResponse(String body, String requestedDate)
+            throws JSONException, ApodException {
+        Object response = new JSONTokener(body).nextValue();
+        if (response instanceof JSONArray) {
+            JSONArray entries = (JSONArray) response;
+            if (entries.length() == 0) {
+                throw new ApodException("NASA has no picture available for this date yet.");
+            }
+            response = entries.getJSONObject(0);
+        }
+        if (!(response instanceof JSONObject)) {
+            throw new JSONException("Expected an APOD object or array");
+        }
+        JSONObject json = (JSONObject) response;
+        if (!json.has("date")) {
+            throw new ApodException(json.optString("message", "NASA has no picture for this date."));
+        }
+        Apod apod = Apod.fromJson(json);
+        if (requestedDate != null && !requestedDate.equals(apod.getDate())) {
+            throw new ApodException("NASA returned a different date. Please try another date.");
+        }
+        return apod;
+    }
+
     /** Downloads an image. Returns null if it can't be loaded. */
     public static Bitmap downloadImage(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) {
@@ -77,10 +106,23 @@ public class ApodApi {
 
         HttpURLConnection connection = null;
         try {
+            // Avoid decoding huge full-resolution NASA images on a phone.
+            Uri uri = Uri.parse(imageUrl);
+            if ("assets.science.nasa.gov".equals(uri.getHost())) {
+                imageUrl = uri.buildUpon().clearQuery()
+                        .appendQueryParameter("w", "1600")
+                        .appendQueryParameter("h", "1600")
+                        .appendQueryParameter("fit", "clip").build().toString();
+            }
             connection = (HttpURLConnection) new URL(imageUrl).openConnection();
             connection.setConnectTimeout(TIMEOUT_MS);
             connection.setReadTimeout(TIMEOUT_MS);
-            return BitmapFactory.decodeStream(connection.getInputStream());
+            if (connection.getResponseCode() != 200) {
+                return null;
+            }
+            try (InputStream stream = connection.getInputStream()) {
+                return BitmapFactory.decodeStream(stream);
+            }
         } catch (IOException e) {
             return null;
         } finally {
@@ -97,7 +139,7 @@ public class ApodApi {
             InputStream errorStream = connection.getErrorStream();
             if (errorStream != null) {
                 JSONObject body = new JSONObject(readText(errorStream));
-                message = body.optString("msg", message);
+                message = body.optString("message", body.optString("msg", message));
             }
         } catch (IOException | JSONException e) {
             // Keep the general message

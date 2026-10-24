@@ -21,7 +21,8 @@ nasa.api.key=YOUR_KEY
 
 `local.properties` is in `.gitignore`, so your key is never pushed to GitHub.
 Each group member uses their own key. Without one, the app falls back to
-NASA's `DEMO_KEY`, which allows only a few requests per hour.
+NASA's `DEMO_KEY`. The app uses NASA's current APOD WordPress endpoint;
+key requirements and rate limits depend on the NASA service.
 
 ## Run it
 
@@ -53,8 +54,25 @@ app/src/main/
 ## How it works
 
 1. `MainActivity` starts a background thread (network calls are not allowed on the UI thread).
-2. `ApodApi.fetchPicture(date)` calls
-   `https://api.nasa.gov/planetary/apod?api_key=KEY&date=YYYY-MM-DD&thumbs=true`
-   and turns the JSON into an `Apod` object.
-3. `ApodApi.downloadImage(url)` downloads the picture as a `Bitmap`.
-4. `runOnUiThread(...)` puts the result on the screen.
+2. `ApodApi.fetchPicture(date)` calls NASA's current endpoint,
+   `https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=1&api_key=KEY`,
+   for the latest entry. A specific date uses `/YYMMDD` before the query string
+   (for example `/240101` for January 1, 2024). The old APOD endpoint can return
+   the NASA logo instead of the actual picture.
+3. The response can be an array (latest) or an object (specific date). The app
+   strips HTML from text and uses `hdurl` for images: `url` is now an article page.
+4. `ApodApi.downloadImage(url)` requests a phone-sized NASA image as a `Bitmap`.
+5. `runOnUiThread(...)` puts the result on the screen. Image failures show a
+   retryable error instead of silently hiding the picture.
+
+## On-device regression checks
+
+With an emulator or phone connected:
+
+```bash
+./gradlew installDebug installDebugAndroidTest
+adb shell am instrument -w com.example.nasaapod.test/com.example.nasaapod.ApodApiInstrumentation
+```
+
+The dependency-free checks cover the current response formats, direct image URLs,
+HTML text, favorites serialization, video thumbnails, and missing/mismatched dates.
