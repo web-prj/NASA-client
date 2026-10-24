@@ -1,0 +1,6 @@
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="@color/ripple">
+    <item><selector><item android:state_selected="true"><layer-list>
+        <item><shape><solid android:color="@color/space_background" /></shape></item>
+        <item android:gravity="top|center_horizontal" android:width="@dimen/tab_indicator_width" android:height="@dimen/tab_indicator_height"><shape><solid android:color="@color/accent" /><corners android:radius="@dimen/hairline_width" /></shape></item>
+    </layer-list></item><item><shape><solid android:color="@color/space_background" /></shape></item></selector></item>
+</ripple>

@@ -1,0 +1,20 @@
+<resources>
+    <dimen name="page_padding">20dp</dimen>
+    <dimen name="space_small">8dp</dimen>
+    <dimen name="space_medium">12dp</dimen>
+    <dimen name="space_large">24dp</dimen>
+    <dimen name="card_radius">24dp</dimen>
+    <dimen name="thumbnail_radius">16dp</dimen>
+    <dimen name="hairline_width">1dp</dimen>
+    <dimen name="touch_target">48dp</dimen>
+    <dimen name="tab_height">64dp</dimen>
+    <dimen name="hero_min_height">360dp</dimen>
+    <dimen name="grid_height">240dp</dimen>
+    <dimen name="headline_size">26sp</dimen>
+    <dimen name="body_size">16sp</dimen>
+    <dimen name="label_size">11sp</dimen>
+    <dimen name="control_text_size">13sp</dimen>
+    <dimen name="tab_indicator_width">24dp</dimen>
+    <dimen name="tab_indicator_height">2dp</dimen>
+    <dimen name="body_line_spacing">8dp</dimen>
+</resources>

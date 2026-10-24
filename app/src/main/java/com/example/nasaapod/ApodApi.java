@@ -11,6 +11,7 @@ import org.json.JSONTokener;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -109,6 +110,11 @@ public class ApodApi {
 
     /** Downloads an image. Returns null if it can't be loaded. */
     public static Bitmap downloadImage(String imageUrl) {
+        return downloadImage(imageUrl, 1600);
+    }
+
+    /** Smaller previews keep the favorites grid's network and memory use modest. */
+    static Bitmap downloadImage(String imageUrl, int size) {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return null;
         }
@@ -119,8 +125,8 @@ public class ApodApi {
             Uri uri = Uri.parse(imageUrl);
             if ("assets.science.nasa.gov".equals(uri.getHost())) {
                 imageUrl = uri.buildUpon().clearQuery()
-                        .appendQueryParameter("w", "1600")
-                        .appendQueryParameter("h", "1600")
+                        .appendQueryParameter("w", String.valueOf(size))
+                        .appendQueryParameter("h", String.valueOf(size))
                         .appendQueryParameter("fit", "clip").build().toString();
             }
             connection = (HttpURLConnection) new URL(imageUrl).openConnection();
@@ -130,7 +136,21 @@ public class ApodApi {
                 return null;
             }
             try (InputStream stream = connection.getInputStream()) {
-                return BitmapFactory.decodeStream(stream);
+                // Some NASA assets ignore resize parameters. Always sample on-device too.
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = stream.read(buffer)) != -1) {
+                    if (bytes.size() + count > 32 * 1024 * 1024) { return null; }
+                    bytes.write(buffer, 0, count);
+                }
+                byte[] data = bytes.toByteArray();
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(data, 0, data.length, options);
+                options.inSampleSize = imageSampleSize(options.outWidth, options.outHeight, size);
+                options.inJustDecodeBounds = false;
+                return BitmapFactory.decodeByteArray(data, 0, data.length, options);
             }
         } catch (IOException e) {
             return null;
@@ -139,6 +159,12 @@ public class ApodApi {
                 connection.disconnect();
             }
         }
+    }
+
+    static int imageSampleSize(int width, int height, int target) {
+        int sample = 1;
+        while (Math.max(width, height) / sample > target) { sample *= 2; }
+        return sample;
     }
 
     /** For a bad date NASA sends a body like {"msg": "Date must be between ..."}. */

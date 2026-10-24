@@ -1,13 +1,31 @@
 <resources>
-    <string name="app_name">Space Pictures</string>
+    <string name="app_name">NASA-client</string>
+    <string name="tab_today">Today</string>
+    <string name="hero_label">NASA / APOD</string>
+    <string name="story_label">Behind the picture</string>
+    <string name="collection_label">Your universe, collected</string>
+    <string name="loading_picture">Finding your place in space…</string>
+    <string name="error_title">Lost in space</string>
+    <string name="date_chip">▦ %1$s</string>
+    <string name="video_metadata">%1$s\n%2$s</string>
+    <string name="unsave">Remove from favorites</string>
+    <string name="remove_favorite_title">Remove this favorite?</string>
+    <string name="remove">Remove</string>
+    <string name="image_download_error">The picture could not be downloaded. Check your connection and try again.</string>
     <string name="pick_date">Pick date</string>
+    <string name="previous_day">‹ Prev</string>
+    <string name="next_day">Next ›</string>
+    <string name="today">Today</string>
+    <string name="open_original">Open original image</string>
+    <string name="open_video">Open video</string>
+    <string name="no_video_preview">No preview is available. Tap Open video to view this entry.</string>
+    <string name="cannot_open_link">Cannot open this link. Please install or enable a web browser.</string>
     <string name="save">♡ Save</string>
-    <string name="saved">♥ Saved</string>
     <string name="favorites">Favorites</string>
     <string name="try_again">Try again</string>
     <string name="picture_description">NASA picture of the day</string>
     <string name="favorites_hint">Tap a picture to open it. Long-press to remove it.</string>
-    <string name="no_favorites">No favorites yet.\nTap \"♡ Save\" on a picture to add it here.</string>
+    <string name="no_favorites">No favorites yet\nTap the heart on a picture to save it here.</string>
     <string name="added_to_favorites">Added to favorites</string>
     <string name="removed_from_favorites">Removed from favorites</string>
 </resources>

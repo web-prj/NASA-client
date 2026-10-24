@@ -1,0 +1,13 @@
+<resources>
+    <color name="space_background">#05060A</color>
+    <color name="space_bottom">#0B0D17</color>
+    <color name="surface">#14161F</color>
+    <color name="hairline">#14FFFFFF</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#9AA0B4</color>
+    <color name="accent">#8AB4FF</color>
+    <color name="ripple">#248AB4FF</color>
+    <color name="glass">#C414161F</color>
+    <color name="scrim_bottom">#ED05060A</color>
+    <color name="transparent">#00000000</color>
+</resources>

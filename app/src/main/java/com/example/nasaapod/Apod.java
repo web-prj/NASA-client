@@ -66,6 +66,11 @@ public class Apod {
         return isImage() ? (hdUrl.isEmpty() ? url : hdUrl) : thumbnailUrl;
     }
 
+    /** Full image URL, or the video's page (never its thumbnail). */
+    public String getOriginalUrl() {
+        return isImage() ? getImageUrl() : url;
+    }
+
     public String getDate() {
         return date;
     }

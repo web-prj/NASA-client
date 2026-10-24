@@ -1,11 +1,17 @@
-# Space Pictures
+# NASA-client
 
 A simple Android app in **Java** for browsing NASA's Astronomy Picture of the Day (APOD).
 
 - Opens on the latest NASA space picture, with its title and explanation
-- **Pick date** shows the picture from any day since June 16, 1995
-- **♡ Save** adds the picture to your favorites (saved on the phone)
-- **Favorites** lists saved pictures: tap to open, long-press to remove
+- Tap the date chip to pick any day since June 16, 1995
+- **Prev / Next** or a horizontal swipe on the image browses one day at a time
+- **Today** returns to the latest published NASA entry (chip hidden on today's date)
+- The floating **↗** opens the original HD image or video page in a compatible app
+- The floating **heart** saves/removes a favorite (stored on the phone)
+- **Favorites** shows a two-column thumbnail grid: tap to open, long-press to remove
+  after confirmation
+- The bottom **TODAY / FAVORITES** tabs switch between browsing and the collection
+- No built-in video player and no Share feature
 
 No extra libraries: only classes built into Android
 (`HttpURLConnection`, `org.json`, `SharedPreferences`, `DatePickerDialog`, `ListView`).
@@ -43,12 +49,17 @@ app/src/main/
     Apod.java                  The data for one picture (JSON in and out)
     ApodApi.java               Downloads the picture info and image from NASA
     FavoritesStore.java        Saves favorites with SharedPreferences
-    MainActivity.java          Main screen: picture, date picker, save button
-    FavoritesActivity.java     List of saved pictures
+    MainActivity.java          Hero image, day navigation, date picker, heart
+    FavoritesActivity.java     Thumbnail grid with a bounded in-memory cache
+    SpaceUi.java               Insets and native motion helpers
   res/layout/
     activity_main.xml          Layout of the main screen
     activity_favorites.xml     Layout of the favorites screen
-  res/values/strings.xml       All text shown in the app
+    item_favorite.xml          Rounded thumbnail card
+    day_navigation.xml         Compact day/date controls
+    bottom_navigation.xml      Shared two-tab navigation
+  res/values/                 Strings, colors, dimensions, dark theme/styles
+  res/drawable/               Rounded shapes, scrims, ripple states, vector icons
 ```
 
 ## How it works
@@ -71,6 +82,29 @@ keeps it (the image is downloaded again). Favorites returns the selected date
 with `setResult()` and closes itself, instead of creating another main screen.
 These use the built-in Android activity APIs, with no additional libraries.
 
+## Visual design and motion
+
+The app stays with **Java + native XML Views**, not Compose. A near-black theme,
+24dp dark cards, white headlines, cool-grey metadata and a pale-blue accent keep
+the focus on NASA's images. The toolbar is removed; the hero extends behind a
+transparent status bar. Window insets keep actions and bottom tabs clear of the
+system bars. The native date picker and removal confirmation use the same dark theme.
+
+The image has a translucent title card (not an expensive blurred surface),
+center-crop framing and a gradient scrim. A dark pulsing skeleton precedes a
+300ms image fade. Day changes slide/fade in over 280ms; scrolling adds light
+parallax and title-card fading. Hearts bounce, controls have ripples, and grid
+cards have a short staggered entrance. Favorites-to-detail uses a native activity
+fade and scale-in instead of a shared-element transition across a network reload.
+Animations check the system animator setting; the loading pulse stops while the
+activity is paused. No Coil, Glide or other library is needed.
+
+Favorites thumbnails download on two background workers and use an 8MiB memory
+cache. Both hero and grid images are downsampled before decoding, since some NASA
+assets ignore server-side resize parameters. Favorites metadata is persistent;
+thumbnails are not stored for offline use. Video entries without a thumbnail keep
+a dark hero with a play button that opens NASA's video page.
+
 ## On-device regression checks
 
 With an emulator or phone connected:
@@ -82,13 +116,26 @@ adb shell am instrument -w com.example.nasaapod.test/com.example.nasaapod.ApodAp
 
 The dependency-free checks cover the current response formats, direct image URLs,
 HTML text, repeated plain-text favorites serialization, video thumbnails, and
-missing/mismatched dates.
+missing/mismatched dates. They also check original image/video link selection,
+day navigation across month/year boundaries and leap days, image downsampling,
+and removal of the redundant leading `Explanation:` label for display.
 
 Manual screen checks:
 
-1. Use **Pick date**, select an older date, then rotate the device in both
+1. Tap the date chip, select an older date, then rotate the device in both
    directions. The selected date should stay the same.
 2. Save a picture, choose a different date, then open the saved picture through
    **Favorites**. It should appear on the existing main screen.
 3. Open **Favorites** and press Back without selecting anything. The current
    picture should remain selected.
+4. Browse with **Prev / Next** and horizontal image swipes, then press **Today**
+   to return to the latest entry. Prev is disabled on June 16, 1995; Next is
+   disabled at today's date. The Today chip is hidden on today's date.
+5. Tap **↗** to view the full image externally. On a video entry, tap the play
+   overlay or arrow to open the video page, even when no preview is available.
+6. Loading replaces content with a dark skeleton. If loading fails, **Pick date**,
+   **Today**, and **Try again** allow recovery.
+7. Disable animations in system settings and repeat navigation. Content should
+   appear immediately without a pulsing skeleton, bounce or parallax.
+8. Check an empty favorites collection, a filled two-column grid, and long-press
+   removal confirmation. Both tabs should remain accessible above the system bar.

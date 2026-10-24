@@ -1,29 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:orientation="vertical">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:text="@string/favorites_hint"
-        android:textSize="14sp" />
-
-    <ListView
-        android:id="@+id/listFavorites"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- Shown instead of the list when there are no favorites -->
-    <TextView
-        android:id="@+id/textEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:padding="24dp"
-        android:text="@string/no_favorites"
-        android:textSize="16sp" />
+    android:id="@+id/favoritesRoot" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/space_background">
+    <LinearLayout android:id="@+id/favoritesHeader" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="@dimen/page_padding" android:orientation="vertical">
+        <TextView style="@style/SpaceLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/collection_label" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_small" android:text="@string/favorites" android:textSize="@dimen/headline_size" android:textStyle="bold" android:textColor="@color/text_primary" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_small" android:text="@string/favorites_hint" android:textSize="@dimen/control_text_size" android:textColor="@color/text_secondary" />
+    </LinearLayout>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <GridView android:id="@+id/listFavorites" android:layout_width="match_parent" android:layout_height="match_parent" android:numColumns="2" android:horizontalSpacing="@dimen/space_medium" android:verticalSpacing="@dimen/space_medium" android:padding="@dimen/page_padding" android:clipToPadding="false" android:stretchMode="columnWidth" android:listSelector="@color/transparent" />
+        <TextView android:id="@+id/textEmpty" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:padding="@dimen/page_padding" android:drawableTop="@drawable/ic_heart_outline" android:drawableTint="@color/text_secondary" android:drawablePadding="@dimen/space_large" android:text="@string/no_favorites" android:textSize="@dimen/body_size" android:textColor="@color/text_secondary" android:gravity="center" />
+    </FrameLayout>
+    <include layout="@layout/bottom_navigation" />
 </LinearLayout>

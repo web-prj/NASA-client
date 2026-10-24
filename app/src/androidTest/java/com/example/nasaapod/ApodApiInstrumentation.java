@@ -29,6 +29,7 @@ public class ApodApiInstrumentation extends Instrumentation {
 
             Apod dated = ApodApi.parseResponse(entry.toString(), "2026-10-19");
             check(dated.getImageUrl().equals(entry.getString("hdurl")), "Use direct hdurl, not article URL");
+            check(dated.getOriginalUrl().equals(entry.getString("hdurl")), "Open full image, not article URL");
             check(dated.getTitle().equals("Stars & galaxies"), "Decode title entities");
             check(dated.getExplanation().equals("Explanation: A galaxy."), "Strip explanation HTML");
             check(dated.getCopyright().equals("NASA"), "Strip credit HTML");
@@ -60,11 +61,34 @@ public class ApodApiInstrumentation extends Instrumentation {
             entry.put("url", "https://example.com/legacy.jpg");
             check(Apod.fromJson(entry).getImageUrl().equals("https://example.com/legacy.jpg"),
                     "Old saved entries still load");
+            check(Apod.fromJson(entry).getOriginalUrl().equals("https://example.com/legacy.jpg"),
+                    "Open old image URL when hdurl is absent");
             entry.put("media_type", "video");
             entry.put("thumbnail_url", "https://example.com/preview.jpg");
             entry.put("hdurl", "https://example.com/video");
             check(Apod.fromJson(entry).getImageUrl().equals("https://example.com/preview.jpg"),
                     "Video uses thumbnail, not hdurl");
+
+            check(Apod.fromJson(entry).getOriginalUrl().equals("https://example.com/legacy.jpg"),
+                    "Open video's page, not thumbnail or hdurl");
+
+            check(MainActivity.shiftDate("2024-01-01", -1).equals("2023-12-31"), "Previous year");
+            check(MainActivity.shiftDate("2023-12-31", 1).equals("2024-01-01"), "Next year");
+            check(MainActivity.shiftDate("2024-03-01", -1).equals("2024-02-29"), "Leap day");
+            check(MainActivity.shiftDate("2024-02-29", 1).equals("2024-03-01"), "After leap day");
+            check(MainActivity.shiftDate("2023-03-01", -1).equals("2023-02-28"), "Non-leap year");
+
+            check(ApodApi.imageSampleSize(4000, 3969, 400) == 16,
+                    "Sample oversized source images for grid memory safety");
+            check(ApodApi.imageSampleSize(1600, 900, 1600) == 1, "Keep phone-sized images");
+            check(MainActivity.displayExplanation("Explanation: A galaxy.").equals("A galaxy."),
+                    "Remove redundant explanation prefix for display");
+            check(MainActivity.displayExplanation("  EXPLANATION: A galaxy.").equals("A galaxy."),
+                    "Handle prefix case and whitespace");
+            check(MainActivity.displayExplanation("An explanation: of stars.")
+                    .equals("An explanation: of stars."), "Keep explanation text inside sentences");
+            check(MainActivity.displayExplanation(original.getExplanation()).equals(original.getExplanation()),
+                    "Do not decode literal text again for display");
 
             results.putString("stream", "APOD regression checks passed.\n");
             finish(Activity.RESULT_OK, results);

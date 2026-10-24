@@ -1,0 +1,8 @@
+<!-- This is an included bar, not an activity root; its opaque background is intentional. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" tools:ignore="Overdraw"
+    android:id="@+id/bottomNavigation" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:background="@color/space_background" android:orientation="horizontal">
+    <Button android:id="@+id/tabToday" style="@style/SpaceTab" android:layout_width="0dp" android:layout_height="@dimen/tab_height" android:layout_weight="1" android:text="@string/tab_today" />
+    <Button android:id="@+id/buttonFavorites" style="@style/SpaceTab" android:layout_width="0dp" android:layout_height="@dimen/tab_height" android:layout_weight="1" android:text="@string/favorites" />
+</LinearLayout>
