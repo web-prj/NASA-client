@@ -185,6 +185,7 @@ public class MainActivity extends Activity {
 
     private void loadPicture() {
         loading = true;
+        currentApod = null;
         if (pendingRequest != null) { pendingRequest.cancel(true); }
         final int request = ++requestNumber;
         showOnly(loadingView);
@@ -192,10 +193,9 @@ public class MainActivity extends Activity {
         buttonFavorite.setEnabled(false);
         buttonOpenOriginal.setEnabled(false);
         String date = requestedDate;
-        int searchDirection = direction;
         pendingRequest = backgroundThread.submit(() -> {
             try {
-                Apod apod = ApodApi.fetchPhoto(date, searchDirection);
+                Apod apod = ApodApi.fetchPhoto(date);
                 if (Thread.currentThread().isInterrupted()) { return; }
                 Bitmap image = ApodApi.downloadImage(apod.getImageUrl());
                 if (image == null) {
@@ -203,6 +203,10 @@ public class MainActivity extends Activity {
                 }
                 runOnUiThread(() -> {
                     if (!isDestroyed() && request == requestNumber) { showPicture(apod, image); }
+                });
+            } catch (ApodApi.NoPhotoException e) {
+                runOnUiThread(() -> {
+                    if (!isDestroyed() && request == requestNumber) { showNoPhoto(e.date); }
                 });
             } catch (ApodApi.ApodException e) {
                 runOnUiThread(() -> {
@@ -216,14 +220,16 @@ public class MainActivity extends Activity {
         loading = false;
         stopSkeleton();
         currentApod = apod;
-        requestedDate = apod.getDate(); // Retain the actual photo date after skipping entries.
+        requestedDate = apod.getDate();
         imagePicture.animate().cancel();
         imagePicture.setImageBitmap(image);
         imagePicture.setContentDescription(apod.getTitle());
         textTitle.setText(apod.getTitle());
         String info = apod.getDate();
         if (!apod.getCopyright().isEmpty()) { info += "  ·  © " + apod.getCopyright(); }
+        textInfo.setMaxLines(3);
         textInfo.setText(info);
+        findViewById(R.id.storyCard).setVisibility(View.VISIBLE);
         textExplanation.setText(displayExplanation(apod.getExplanation()));
         contentView.scrollTo(0, 0);
         imagePicture.setTranslationY(0f);
@@ -243,6 +249,33 @@ public class MainActivity extends Activity {
         direction = 0;
     }
 
+    private void showNoPhoto(String date) {
+        loading = false;
+        stopSkeleton();
+        currentApod = null;
+        requestedDate = date != null ? date : (requestedDate != null ? requestedDate : todayDate());
+        imagePicture.animate().cancel();
+        imagePicture.setImageDrawable(null);
+        imagePicture.setAlpha(1f);
+        imagePicture.setTranslationY(0f);
+        imagePicture.setContentDescription(getString(R.string.no_picture_title));
+        textTitle.setText(R.string.no_picture_title);
+        textInfo.setMaxLines(Integer.MAX_VALUE);
+        textInfo.setText(getString(R.string.no_picture_message, requestedDate));
+        textExplanation.setText("");
+        findViewById(R.id.storyCard).setVisibility(View.GONE);
+        titleGlass.setAlpha(1f);
+        titleGlass.setScaleX(1f);
+        titleGlass.setScaleY(1f);
+        contentView.scrollTo(0, 0);
+        showOnly(contentView);
+        updateNavigation();
+        updateFavoriteButton();
+        buttonOpenOriginal.setEnabled(false);
+        SpaceUi.enter(this, contentView, direction, 0);
+        direction = 0;
+    }
+
     static String displayExplanation(String explanation) {
         return explanation.replaceFirst("(?i)^\\s*Explanation:\\s*", "");
     }
@@ -252,7 +285,7 @@ public class MainActivity extends Activity {
         stopSkeleton();
         textError.setText(message);
         showOnly(errorView);
-        // Retry (including after rotation) must keep the original photo-search direction.
+        // Retry keeps the exact requested date; direction is only used for animation.
     }
 
     private void showOnly(View view) {
@@ -277,8 +310,7 @@ public class MainActivity extends Activity {
     }
 
     private String navigationDate() {
-        return currentApod == null ? (requestedDate == null ? todayDate() : requestedDate)
-                : currentApod.getDate();
+        return requestedDate == null ? todayDate() : requestedDate;
     }
 
     private void updateNavigation() {

@@ -2,12 +2,12 @@
 
 A simple, photo-only Android app in **Java** for browsing NASA's Astronomy Picture of the Day (APOD).
 
-- Opens on the latest NASA photo, with its actual date, title, credit and explanation
+- Opens on the latest NASA entry, showing its picture or a clear no-picture state
 - Tap the date chip to pick any day since June 16, 1995; non-photo days show a
   clear “No photo for this date” message rather than opening other media
-- **Prev / Next** or a horizontal swipe browses the nearest photo in that direction,
-  skipping non-photo entries
-- **Today** returns to the latest available photo (chip hidden on today's date)
+- **Prev / Next** or a horizontal swipe moves exactly one calendar day; days without
+  a picture stay selected and show a no-picture message with day navigation available
+- **Today** returns to the latest entry without skipping non-photo days (chip hidden on today's date)
 - The floating **↗** opens the original HD image in a compatible app
 - The floating **heart** saves/removes a favorite (stored on the phone)
 - **Favorites** shows a two-column thumbnail grid: tap to open, long-press to remove
@@ -67,14 +67,14 @@ app/src/main/
 ## How it works
 
 1. `MainActivity` starts a background thread (network calls are not allowed on the UI thread).
-2. `ApodApi.fetchPhoto(date, direction)` searches for a photo using NASA's current endpoint,
+2. `ApodApi.fetchPhoto(date)` loads the selected entry using NASA's current endpoint,
    `https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=1&api_key=KEY`,
    for the latest entry. A specific date uses `/YYMMDD` before the query string
    (for example `/240101` for January 1, 2024). The old APOD endpoint can return
-   the NASA logo instead of the actual picture. Latest searches backward if the
-   latest entry is not a photo; Prev/Next search in their own direction. Only
-   non-photo entries are skipped, not connection or missing-date errors. Searches
-   stop at the date boundaries or after 31 entries. Picked dates never silently change.
+   the NASA logo instead of the actual picture. No request searches adjacent dates.
+   Non-photo entries, empty results and entries without an image URL show a neutral
+   no-picture state with the date and Prev/Next controls. Connection, parsing and
+   image-download failures remain retryable errors.
 3. The response can be an array (latest) or an object (specific date). The app
    strips HTML once in `ApodApi` and uses `hdurl` for images: `url` is now an
    article page. Saved favorites are already plain text and are not decoded again.
@@ -123,7 +123,8 @@ adb shell am instrument -w com.example.nasaapod.test/com.example.nasaapod.ApodAp
 The dependency-free checks cover the current response formats, direct image URLs,
 HTML text, repeated plain-text favorites serialization, rejection of non-photo
 entries, and missing/mismatched dates. They also check original image link selection,
-photo-only search directions, bounded searching, preservation of connection errors,
+exact-date loading (including non-photo latest entries), empty results, missing image URLs,
+preservation of connection errors,
 filtering older mixed-media favorites,
 day navigation across month/year boundaries and leap days, image downsampling,
 and removal of the redundant leading `Explanation:` label for display.
@@ -140,8 +141,10 @@ Manual screen checks:
    to return to the latest photo. Prev is disabled on June 16, 1995; Next is
    disabled at today's date. The Today chip is hidden on today's date.
 5. Tap **↗** to view the full image externally. Pick January 6, 2024 (a non-photo
-   day): the no-photo error should appear, with no playback controls. From January
-   5, Next should skip directly to January 7; Prev should return to January 5.
+   day): the no-picture state should appear with that date, with no playback controls
+   and disabled favorite/original actions. From January 5, Next should show January 6
+   without a picture; another Next should show January 7. Prev should visit January 6
+   again. Rotate on the empty date and confirm the date and navigation remain correct.
 6. Loading replaces content with a dark skeleton. If loading fails, **Pick date**,
    **Today**, and **Try again** allow recovery.
 7. Disable animations in system settings and repeat navigation. Content should

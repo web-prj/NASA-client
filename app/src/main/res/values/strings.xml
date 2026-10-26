@@ -6,6 +6,8 @@
     <string name="collection_label">Your universe, collected</string>
     <string name="loading_picture">Finding your place in space…</string>
     <string name="error_title">Lost in space</string>
+    <string name="no_picture_title">No picture for this date</string>
+    <string name="no_picture_message">%1$s\nNo picture is available for this day. You can still browse the previous or next day.</string>
     <string name="date_chip">▦ %1$s</string>
     <string name="unsave">Remove from favorites</string>
     <string name="remove_favorite_title">Remove this favorite?</string>

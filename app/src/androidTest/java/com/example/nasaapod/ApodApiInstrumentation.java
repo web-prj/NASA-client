@@ -56,7 +56,10 @@ public class ApodApiInstrumentation extends Instrumentation {
 
             Apod latest = ApodApi.parseResponse("[" + entry + "]", null);
             check(latest.getDate().equals("2026-10-19"), "Read latest array");
-            expectFailure("[]", null);
+            expectNoPhoto("[]", "2024-01-06", "2024-01-06");
+            expectNoPhoto("[]", null, null);
+            expectNoPhoto(new JSONObject(entry.toString()).put("hdurl", "").put("url", "")
+                    .toString(), "2026-10-19", "2026-10-19");
             expectFailure(entry.toString(), "2026-10-18");
             expectFailure("{\"code\":\"not_found\",\"message\":\"No entry\"}", null);
 
@@ -73,7 +76,7 @@ public class ApodApiInstrumentation extends Instrumentation {
             } catch (JSONException expected) { }
             try {
                 ApodApi.parseResponse(nonPhoto.toString(), "2026-10-19");
-                throw new AssertionError("Picked non-photo date must show a no-photo error");
+                throw new AssertionError("Non-photo date must show the empty state");
             } catch (ApodApi.NoPhotoException expected) {
                 check(expected.date.equals("2026-10-19"), "Keep rejected date for browsing");
             }
@@ -107,75 +110,45 @@ public class ApodApiInstrumentation extends Instrumentation {
     }
 
     private static void checkPhotoSearch() throws Exception {
-        ApodApi.PhotoSource source = date -> {
-            if (date == null || date.equals("2024-01-06")) {
-                throw new ApodApi.NoPhotoException("2024-01-06");
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                .format(new java.util.Date());
+        for (String requested : new String[]{null, "2024-01-06", "1995-06-16", today}) {
+            int[] calls = {0};
+            try {
+                ApodApi.findPhoto(requested, date -> {
+                    calls[0]++;
+                    check(java.util.Objects.equals(date, requested), "Request the exact selected date");
+                    throw new ApodApi.NoPhotoException(date == null ? "2024-01-06" : date);
+                });
+                throw new AssertionError("Non-photo entries must not be replaced with another date");
+            } catch (ApodApi.NoPhotoException expected) {
+                check(calls[0] == 1, "Never search adjacent dates, even for latest");
+                check(expected.date.equals(requested == null ? "2024-01-06" : requested),
+                        "Retain the empty entry's date for navigation");
             }
-            return new Apod(date, "Photo", "Description", "https://example.com/photo.jpg", "NASA");
-        };
-        check(ApodApi.findPhoto(null, 0, source).getDate().equals("2024-01-05"),
-                "Latest falls back to previous photo");
-        check(ApodApi.findPhoto("2024-01-06", 1, source).getDate().equals("2024-01-07"),
-                "Next skips non-photo entry forward");
-        check(ApodApi.findPhoto("2024-01-06", -1, source).getDate().equals("2024-01-05"),
-                "Previous skips non-photo entry backward");
-        try {
-            ApodApi.findPhoto("2024-01-06", 0, source);
-            throw new AssertionError("Date picker must not silently change dates");
-        } catch (ApodApi.NoPhotoException expected) { }
+        }
+        Apod photo = ApodApi.findPhoto("2024-01-07", date ->
+                new Apod(date, "Photo", "Description", "https://example.com/photo.jpg", "NASA"));
+        check(photo.getDate().equals("2024-01-07"), "Photos keep their requested date");
         int[] calls = {0};
         try {
-            ApodApi.findPhoto("2024-01-06", 1, date -> {
+            ApodApi.findPhoto("2024-01-06", date -> {
                 calls[0]++;
                 throw new ApodApi.ApodException("Connection failed");
             });
-            throw new AssertionError("Connection errors must not be skipped");
+            throw new AssertionError("Connection errors must remain errors");
         } catch (ApodApi.ApodException expected) {
-            check(calls[0] == 1, "Stop immediately on real errors");
+            check(calls[0] == 1 && expected.getMessage().equals("Connection failed"),
+                    "Preserve genuine errors without searching other dates");
         }
-        calls[0] = 0;
+    }
+
+    private static void expectNoPhoto(String body, String requested, String expectedDate) throws Exception {
         try {
-            ApodApi.findPhoto("2024-01-06", 1, date -> {
-                calls[0]++;
-                if (date.equals("2024-01-06")) { throw new ApodApi.NoPhotoException(date); }
-                throw new ApodApi.ApodException("Connection failed after skip");
-            });
-            throw new AssertionError("Errors after skipped entries must stop the search");
-        } catch (ApodApi.ApodException expected) {
-            check(calls[0] == 2 && expected.getMessage().equals("Connection failed after skip"),
-                    "Preserve the original error after skipping unsupported media");
-        }
-        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                .format(new java.util.Date());
-        calls[0] = 0;
-        try {
-            ApodApi.findPhoto(today, 1, date -> {
-                calls[0]++;
-                throw new ApodApi.NoPhotoException(date);
-            });
-            throw new AssertionError("Search must stop at today");
-        } catch (ApodApi.ApodException expected) {
-            check(calls[0] == 1, "Do not browse into the future");
-        }
-        calls[0] = 0;
-        try {
-            ApodApi.findPhoto("2024-01-06", -1, date -> {
-                calls[0]++;
-                throw new ApodApi.NoPhotoException(date);
-            });
-            throw new AssertionError("Search must be bounded");
-        } catch (ApodApi.ApodException expected) {
-            check(calls[0] == 31, "Cap search at 31 entries");
-        }
-        calls[0] = 0;
-        try {
-            ApodApi.findPhoto("1995-06-16", -1, date -> {
-                calls[0]++;
-                throw new ApodApi.NoPhotoException(date);
-            });
-            throw new AssertionError("Search must stop at first APOD date");
-        } catch (ApodApi.ApodException expected) {
-            check(calls[0] == 1, "Do not browse before the first APOD date");
+            ApodApi.parseResponse(body, requested);
+            throw new AssertionError("Expected an empty state");
+        } catch (ApodApi.NoPhotoException expected) {
+            check(java.util.Objects.equals(expected.date, expectedDate), "Keep empty response date");
         }
     }
 

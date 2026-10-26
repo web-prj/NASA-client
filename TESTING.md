@@ -1,5 +1,26 @@
 # Regression verification
 
+## Current change: keep days without pictures
+
+- Removed adjacent-date searching, including the latest-entry fallback.
+- Non-photo entries, empty API arrays and missing image URLs now show a neutral
+  no-picture state with the selected date and working Prev/Next/date controls.
+- Favorite and original-image actions are disabled on empty days. Network, parsing
+  and image-download failures remain errors with Retry.
+- Updated instrumentation checks to assert one exact-date request, preservation of
+  the non-photo latest entry's date, empty results and missing image URLs.
+- Verified `:app:assembleDebug`, `:app:assembleDebugAndroidTest` and `:app:lintDebug`
+  successfully. No device/emulator was connected, so the updated instrumentation
+  suite and empty-state UI have not yet been run on a device.
+- Manual follow-up: browse January 5 → 6 → 7, 2024 and back, rotate on January 6,
+  check disabled image actions, swipe away from the empty day, then verify offline
+  Retry does not change the requested date.
+
+## Historical validation before this change
+
+The notes below describe the previous implementation; skipping/fallback behavior
+is superseded by the exact-date behavior above.
+
 Tested on the Android emulator (`sdk_gphone64_x86_64`, API 37) using the debug
 build. The app remains Java + XML Views with no third-party application libraries.
 

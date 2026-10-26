@@ -41,7 +41,7 @@ public class ApodApi {
     static class NoPhotoException extends ApodException {
         final String date;
         NoPhotoException(String date) {
-            super("No photo for this date. Pick another date or return to the latest photo.");
+            super("No picture available for this date.");
             this.date = date;
         }
     }
@@ -50,32 +50,17 @@ public class ApodApi {
         Apod fetch(String date) throws ApodException;
     }
 
-    /** Latest searches backward; day browsing skips non-photo entries in its direction. */
-    public static Apod fetchPhoto(String date, int direction) throws ApodException {
-        return findPhoto(date, direction, ApodApi::fetchPicture);
+    /** Load only the requested entry, including when the latest entry is not a photo. */
+    public static Apod fetchPhoto(String date) throws ApodException {
+        return findPhoto(date, ApodApi::fetchPicture);
     }
 
-    static Apod findPhoto(String date, int direction, PhotoSource source) throws ApodException {
-        int step = date == null ? -1 : direction;
-        String candidate = date;
-        // Bound network work rather than searching indefinitely through unavailable photos.
-        for (int i = 0; i < 31; i++) {
-            if (Thread.currentThread().isInterrupted()) {
-                throw new ApodException("Photo loading was cancelled.");
-            }
-            try {
-                return source.fetch(candidate);
-            } catch (NoPhotoException e) {
-                if (step == 0) { throw e; } // A picked date must never silently change.
-                candidate = MainActivity.shiftDate(e.date, step);
-                String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                        .format(new java.util.Date());
-                if (candidate.compareTo("1995-06-16") < 0 || candidate.compareTo(today) > 0) {
-                    throw new ApodException("No more photos in this direction. Pick another date.");
-                }
-            }
+    static Apod findPhoto(String date, PhotoSource source) throws ApodException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new ApodException("Photo loading was cancelled.");
         }
-        throw new ApodException("No photo found within 31 entries. Please pick another date.");
+        // Never silently replace the requested date with a different day's picture.
+        return source.fetch(date);
     }
 
     /**
@@ -123,7 +108,7 @@ public class ApodApi {
         if (response instanceof JSONArray) {
             JSONArray entries = (JSONArray) response;
             if (entries.length() == 0) {
-                throw new ApodException("NASA has no picture available for this date yet.");
+                throw new NoPhotoException(requestedDate);
             }
             response = entries.getJSONObject(0);
         }
@@ -145,7 +130,11 @@ public class ApodApi {
         json.put("title", plainText(json.optString("title", "Untitled")));
         json.put("explanation", plainText(json.optString("explanation", "")));
         json.put("copyright", plainText(json.optString("copyright", "")));
-        return Apod.fromJson(json);
+        Apod apod = Apod.fromJson(json);
+        if (apod.getImageUrl().trim().isEmpty()) {
+            throw new NoPhotoException(date);
+        }
+        return apod;
     }
 
     private static String plainText(String html) {
